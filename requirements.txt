@@ -1,0 +1,12 @@
+cffi==1.14.3
+dill==0.3.3
+multiprocess==0.70.10
+pathos==0.2.6
+pox==0.2.9
+ppft==1.6.6.3
+pycparser==2.20
+pymunk==5.7.0
+PyQt5==5.15.1
+PyQt5-sip==12.8.1
+PyQt5-stubs==5.14.2.2
+six==1.15.0
