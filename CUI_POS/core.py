@@ -108,19 +108,9 @@ class POSCore:
             if len(self.product_datas) != len(product_info_lines):
                 raise Product.DuplicatedProductCode
 
-            # product_datas 파일 갱신
-            self.update_product_data(self.product_datas, Product.PRODUCT_DATA_FILENAME)
-            print(self.product_datas)
-
         except (Product.InterfaceFileIsEmpty, Product.DuplicatedProductCode) as e:
             print(e)
             sys.exit(1)
 
     def run(self):
         print("POS is starting...")
-
-    def update_product_data(self, data: dict,filename: str):
-        FILENAME = f"DB/{filename}"
-        with open(FILENAME, 'wb') as f:
-            pickle.dump(data, f)
-        print(f"{FILENAME} has been updated")

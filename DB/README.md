@@ -24,7 +24,3 @@
     1. 제품명     [문자열, str, 중복 불가능]
     2. 단가       [정수, int, 0 이상]
     3. 할인율     [정수, int, 0~100%]
-    
-#### 2. product_datas
-##### delimiter : ","
-##### description : 제품 코드(product_code)를 key로 하고, 제품명(name), 단가(price), 할인율(discount_rate)을 member로 가지는 Product 클래스를 value로 하는 dictionary입니다.
