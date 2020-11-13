@@ -4,9 +4,10 @@ import pickle
 from CUI_POS.tools import read_interface_file
 
 
+# 제품 개별 정보 데이터
 class Product:
     DELIMITER = ','
-    COLUMN_LEN = 4
+    COLUMN_LEN = 3
 
     PRODUCT_INTERFACE_FILENAME = "product_interface"
     PRODUCT_DATA_FILENAME = "product_datas"
@@ -15,11 +16,6 @@ class Product:
         self.name = name
         self.price = price
         self.discount_rate = discount_rate
-
-    # 제품 코드가 유일하지 않은 경우 발생
-    class DuplicatedProductCode(Exception):
-        def __str__(self):
-            return "제품 코드가 유일하지 않습니다."
 
     # DB/product_interface 파일이 비어 있는 경우 발생
     class InterfaceFileIsEmpty(Exception):
@@ -30,11 +26,6 @@ class Product:
     class InconsistentColumnLength(Exception):
         def __str__(self):
             return "Column의 크기가 잘못된 Row가 존재합니다."
-
-    # code가 0 미만의 값일 때 발생
-    class NegativeProductCode(Exception):
-        def __str__(self):
-            return "제품 코드가 0 미만의 값입니다."
 
     # price가 0 미만의 값일 때 발생
     class NegativePrice(Exception):
@@ -60,20 +51,16 @@ class Product:
             if len(tokens) != Product.COLUMN_LEN:
                 raise Product.InconsistentColumnLength
 
-            code, name, price, discount_rate = int(tokens[0]), tokens[1], int(tokens[2]), int(tokens[3])
+            name, price, discount_rate = tokens[0], int(tokens[1]), int(tokens[2])
 
             # 유효한 할인율이 아닌 경우
             if not (0 <= discount_rate <= 100):
                 raise Product.InvalidDiscountRate
-            # 제품 코드가 0 미만의 값인 경우
-            if code < 0:
-                raise Product.NegativeProductCode
             # 가격이 0 미만의 값인 경우
             if price < 0:
                 raise Product.NegativePrice
 
-        except (Product.InvalidDiscountRate, Product.NegativeProductCode,
-                Product.NegativePrice, Product.InconsistentColumnLength) as e:
+        except (Product.InvalidDiscountRate, Product.NegativePrice, Product.InconsistentColumnLength) as e:
             print(e)
 
         # 형 변환이 불가능한 값이 입력된 경우
@@ -89,8 +76,18 @@ class Product:
                 print(f"ERROR: {line}")
                 sys.exit(1)
             else:
-                return code, Product(name, price, discount_rate)
+                return name, Product(name, price, discount_rate)
 
+
+# 제품 개별 판매 정보
+class ProductSalesData:
+    def __init__(self, product_code: int):
+        # 제품별 고유 코드
+        self.product_code = product_code
+        # 제품 판매 개수
+        self.sales_count = 0
+        # 제품 총 판매액
+        self.sales_total = 0
 
 class POSCore:
     def __init__(self):
@@ -104,11 +101,10 @@ class POSCore:
 
             # 제품 정보 data 파일을 dictionary로 변환
             self.product_datas = {pair[0]: pair[1] for pair in map(Product.get_code_product_pair, product_info_lines)}
-            # 제품 코드의 유일성을 검사
-            if len(self.product_datas) != len(product_info_lines):
-                raise Product.DuplicatedProductCode
 
-        except (Product.InterfaceFileIsEmpty, Product.DuplicatedProductCode) as e:
+            # 제품별 판매 정보(product_sales_data)를 불러옴
+
+        except Product.InterfaceFileIsEmpty as e:
             print(e)
             sys.exit(1)
 
