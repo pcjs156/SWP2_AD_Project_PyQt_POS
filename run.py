@@ -3,4 +3,3 @@ if __name__ == "__main__":
 
     POSCore = POSCore()
     POSCore.run()
-    print(POSCore.product_datas)
