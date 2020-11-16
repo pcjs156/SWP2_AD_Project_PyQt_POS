@@ -28,61 +28,61 @@ class MyWindow(QWidget):
 
     def initUI(self):
         # upperlayout- left
-        tableWidget1 = QTableWidget(10, 6)
-        tableWidget1.setHorizontalHeaderLabels(["코드", "제품명", "단가", "할인", "수량", "합계"])
-        tableWidget1.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        tableWidget1.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        tableWidget1.verticalHeader().setVisible(False)
-        tableWidget1.resizeColumnsToContents()
-        tableWidget1.resizeRowsToContents()
-        tableWidget1.setMinimumSize(550, 500)
+        self.purchasing_list_widget = QTableWidget(10, 6)
+        self.purchasing_list_widget.setHorizontalHeaderLabels(["코드", "제품명", "단가", "할인", "수량", "합계"])
+        self.purchasing_list_widget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.purchasing_list_widget.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.purchasing_list_widget.verticalHeader().setVisible(False)
+        self.purchasing_list_widget.resizeColumnsToContents()
+        self.purchasing_list_widget.resizeRowsToContents()
+        self.purchasing_list_widget.setMinimumSize(550, 500)
 
         # lowerlayout - left
-        tableWidget2 = QTableWidget(3, 1)
-        tableWidget2.setVerticalHeaderLabels(["합계", "할인", "총계"])
-        tableWidget2.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        tableWidget2.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        tableWidget2.horizontalHeader().setVisible(False)
-        tableWidget2.resizeColumnsToContents()
-        tableWidget2.resizeRowsToContents()
-        tableWidget2.setMinimumSize(500, 100)
+        self.total_price_widget = QTableWidget(3, 1)
+        self.total_price_widget.setVerticalHeaderLabels(["합계", "할인", "총계"])
+        self.total_price_widget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.total_price_widget.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.total_price_widget.horizontalHeader().setVisible(False)
+        self.total_price_widget.resizeColumnsToContents()
+        self.total_price_widget.resizeRowsToContents()
+        self.total_price_widget.setMinimumSize(500, 100)
 
         # upperlayout - right
-        menuBox = QGroupBox("메뉴")
-        upperRightLayOut = QGridLayout()
+        self.menuBox = QGroupBox("메뉴")
+        self.upperRightLayOut = QGridLayout()
 
         r, c = 3, 5
         __tmp_product_pairs = tuple((name, obj) for name, obj in self.product_datas.items())
         for i in range(len(__tmp_product_pairs)):
             product_name, product_obj = __tmp_product_pairs[i]
-            upperRightLayOut.addWidget(Button(product_name, self.buttonClicked), i//c, i%c)
+            self.upperRightLayOut.addWidget(Button(product_name, self.buttonClicked), i//c, i%c)
 
-        menuBox.setLayout(upperRightLayOut)
+        self.menuBox.setLayout(self.upperRightLayOut)
 
         # lowerlayout - right
-        paymentButton = Button("계산", self.buttonClicked)
-        cancelButton = Button("취소", self.buttonClicked)
-        salesButton = Button("매출 정보", self.buttonClicked)
+        self.payment_button = Button("계산", self.buttonClicked)
+        self.cancel_button = Button("취소", self.buttonClicked)
+        self.sales_button = Button("매출 정보", self.buttonClicked)
 
-        lowerRightLayout = QHBoxLayout()
-        lowerRightLayout.addWidget(paymentButton)
-        lowerRightLayout.addWidget(cancelButton)
-        lowerRightLayout.addWidget(salesButton)
+        self.function_layout = QHBoxLayout()
+        self.function_layout.addWidget(self.payment_button)
+        self.function_layout.addWidget(self.cancel_button)
+        self.function_layout.addWidget(self.sales_button)
 
         # layout
-        upperLayOut = QHBoxLayout()
-        upperLayOut.addWidget(tableWidget1)
-        upperLayOut.addWidget(menuBox)
+        self.upper_layOut = QHBoxLayout()
+        self.upper_layOut.addWidget(self.purchasing_list_widget)
+        self.upper_layOut.addWidget(self.menuBox)
 
-        lowerLayOut = QHBoxLayout()
-        lowerLayOut.addWidget(tableWidget2)
-        lowerLayOut.addLayout(lowerRightLayout)
+        self.lower_layOut = QHBoxLayout()
+        self.lower_layOut.addWidget(self.total_price_widget)
+        self.lower_layOut.addLayout(self.function_layout)
 
-        layout = QVBoxLayout()
-        layout.addLayout(upperLayOut)
-        layout.addLayout(lowerLayOut)
+        self.main_layout = QVBoxLayout()
+        self.main_layout.addLayout(self.upper_layOut)
+        self.main_layout.addLayout(self.lower_layOut)
 
-        self.setLayout(layout)
+        self.setLayout(self.main_layout)
         self.setWindowTitle('AD PROJECT')
 
     def buttonClicked(self):
@@ -111,7 +111,8 @@ class MyWindow(QWidget):
 
         else:
             print("알 수 없는 버튼입니다.")
-            sys.exit(-1);
+            sys.exit(-1)
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
