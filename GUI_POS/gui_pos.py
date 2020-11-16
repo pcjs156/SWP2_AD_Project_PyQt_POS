@@ -1,17 +1,12 @@
-import sys, os
+import sys
 from PyQt5.QtWidgets import *
-from datetime import datetime
-from PyQt5.QtCore import pyqtSlot, Qt
 
 from CUI_POS.tools import read_interface_file
 
 from CUI_POS.core import Product
-# from CUI_POS import function
-import pdb
 
 
 class Button(QToolButton):
-
     def __init__(self, text, callback):
         super().__init__()
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
@@ -41,9 +36,9 @@ class MyWindow(QWidget):
         tableWidget1.verticalHeader().setVisible(False)
         tableWidget1.resizeColumnsToContents()
         tableWidget1.resizeRowsToContents()
-        tableWidget1.setMinimumSize(550,500)
+        tableWidget1.setMinimumSize(550, 500)
 
-        #lowerlayout - left
+        # lowerlayout - left
         tableWidget2 = QTableWidget(3, 1)
         tableWidget2.setVerticalHeaderLabels(["합계", "할인", "총계"])
         tableWidget2.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
