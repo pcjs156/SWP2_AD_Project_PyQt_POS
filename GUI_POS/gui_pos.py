@@ -6,7 +6,7 @@ from CUI_POS.tools import read_interface_file
 from CUI_POS.core import Product
 
 
-class Button(QToolButton):
+class CustomButton(QToolButton):
     def __init__(self, text, callback):
         super().__init__()
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
@@ -14,7 +14,7 @@ class Button(QToolButton):
         self.clicked.connect(callback)
 
 
-class MyWindow(QWidget):
+class GUIPosWindow(QWidget):
     def __init__(self):
         super().__init__()
 
@@ -55,14 +55,14 @@ class MyWindow(QWidget):
         __tmp_product_pairs = tuple((name, obj) for name, obj in self.product_datas.items())
         for i in range(len(__tmp_product_pairs)):
             product_name, product_obj = __tmp_product_pairs[i]
-            self.upperRightLayOut.addWidget(Button(product_name, self.buttonClicked), i//c, i%c)
+            self.upperRightLayOut.addWidget(CustomButton(product_name, self.buttonClicked), i//c, i%c)
 
         self.menuBox.setLayout(self.upperRightLayOut)
 
         # lowerlayout - right
-        self.payment_button = Button("계산", self.buttonClicked)
-        self.cancel_button = Button("취소", self.buttonClicked)
-        self.sales_button = Button("매출 정보", self.buttonClicked)
+        self.payment_button = CustomButton("계산", self.buttonClicked)
+        self.cancel_button = CustomButton("취소", self.buttonClicked)
+        self.sales_button = CustomButton("매출 정보", self.buttonClicked)
 
         self.function_layout = QHBoxLayout()
         self.function_layout.addWidget(self.payment_button)
@@ -97,6 +97,7 @@ class MyWindow(QWidget):
         # 계산 버튼을 누른 경우
         elif key == "계산":
             print("계산 키가 눌렸습니다.")
+            print(self.purchasing_list_widget.currentRow())
             pass
 
         # 취소 버튼을 누른 경우
@@ -116,6 +117,6 @@ class MyWindow(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    mywindow = MyWindow()
-    mywindow.show()
+    pos = GUIPosWindow()
+    pos.show()
     app.exec_()
