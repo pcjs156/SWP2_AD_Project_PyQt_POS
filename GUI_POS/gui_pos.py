@@ -1,4 +1,4 @@
-import sys
+import sys, os
 from PyQt5.QtWidgets import *
 from datetime import datetime
 from PyQt5.QtCore import pyqtSlot, Qt
@@ -7,8 +7,9 @@ from CUI_POS.tools import read_interface_file
 
 from CUI_POS.core import Product
 # from CUI_POS import function
-
 import pdb
+
+
 class Button(QToolButton):
 
     def __init__(self, text, callback):
@@ -26,7 +27,7 @@ class MyWindow(QWidget):
 
 
     def initUI(self):
-        product_info_lines = read_interface_file(Product.PRODUCT_INTERFACE_FILENAME)
+        product_info_lines = read_interface_file(Product.PRODUCT_INTERFACE_FILENAME, "../")
         if len(product_info_lines) == 0:
             raise Product.InterfaceFileIsEmpty
 

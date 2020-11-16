@@ -3,10 +3,10 @@ import sys
 
 # "filename" 이라는 이름의 interface 파일이 존재하면 해당 파일을 불러오고,
 # 파일이 존재하지 않으면 파일을 새로 생성한 뒤 개행 문자로 구분되어 strip된 각 행을 요소로 가지는 list를 반환.
-def read_interface_file(filename: str) -> list:
+def read_interface_file(filename: str, prefix="") -> list:
     from CUI_POS.core import Product
 
-    FILENAME = f"DB/{filename}"
+    FILENAME = f"{prefix}DB/{filename}"
 
     print(f"Loading {FILENAME}...")
     try:
