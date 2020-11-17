@@ -28,11 +28,10 @@ class GUIPosWindow(QWidget):
 
     def initUI(self):
         # upperlayout- left
-        self.purchasing_list_widget = QTableWidget(10, 6)
-        self.purchasing_list_widget.setHorizontalHeaderLabels(["코드", "제품명", "단가", "할인", "수량", "합계"])
+        self.purchasing_list_widget = QTableWidget(30, 5)
+        self.purchasing_list_widget.setHorizontalHeaderLabels(["제품명", "단가", "할인", "수량", "합계"])
         self.purchasing_list_widget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.purchasing_list_widget.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.purchasing_list_widget.verticalHeader().setVisible(False)
         self.purchasing_list_widget.resizeColumnsToContents()
         self.purchasing_list_widget.resizeRowsToContents()
         self.purchasing_list_widget.setMinimumSize(550, 500)
