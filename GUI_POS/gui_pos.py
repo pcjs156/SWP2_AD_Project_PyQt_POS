@@ -6,7 +6,7 @@ from CUI_POS.tools import read_interface_file
 from CUI_POS.core import Product
 
 
-class CustomButton(QToolButton):
+class CustomButton(QPushButton):
     def __init__(self, button_text, callback):
         super().__init__()
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
@@ -65,13 +65,20 @@ class GUIPosWindow(QWidget):
 
         # upperlayout - right
         self.menuBox = QGroupBox("메뉴")
+        self.menuBox.setToolTip(f"<p><span style='color: blue;'>좌클릭시 제품을 구매 목록에 하나 추가하고,<br></span>"
+                              + f"<span style='color: red;'>우클릭시 제품을 구매 목록에서 하나 뺍니다.</span></p>")
         self.upperRightLayOut = QGridLayout()
 
         r, c = 3, 5
         __tmp_product_pairs = tuple((name, obj) for name, obj in self.product_datas.items())
         for i in range(len(__tmp_product_pairs)):
             product_name, product_obj = __tmp_product_pairs[i]
-            self.upperRightLayOut.addWidget(ProductButton(self, product_name), i//c, i%c)
+            product_btn = ProductButton(self, product_name)
+            product_btn.setToolTip(f"정가: {product_obj.price}원<br>"
+                                   f"할인율: {product_obj.discount_rate}%<br>"
+                                   f"가격: {product_obj.calc_price(1)}원")
+
+            self.upperRightLayOut.addWidget(product_btn, i//c, i%c)
 
         self.menuBox.setLayout(self.upperRightLayOut)
 
