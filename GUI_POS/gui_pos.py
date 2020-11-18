@@ -1,16 +1,29 @@
 import sys
 from PyQt5.QtWidgets import *
+from PyQt5.QtCore import Qt
 
 from CUI_POS.tools import read_interface_file
 from CUI_POS.core import Product
 
 
 class CustomButton(QToolButton):
-    def __init__(self, text, callback):
+    def __init__(self, button_text, callback):
         super().__init__()
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        self.setText(text)
+        self.setText(button_text)
         self.clicked.connect(callback)
+
+
+class ProductButton(CustomButton):
+    def __init__(self, POS, button_text, callback=lambda x: x):
+        super().__init__(button_text, callback)
+        self.POS = POS
+
+    def mousePressEvent(self, QMouseEvent):
+        if QMouseEvent.button() == Qt.LeftButton:
+            self.POS.purchase(self.text(), 1)
+        elif QMouseEvent.button() == Qt.RightButton:
+            self.POS.remove_product(self.text(), 1)
 
 
 class GUIPosWindow(QWidget):
@@ -58,7 +71,7 @@ class GUIPosWindow(QWidget):
         __tmp_product_pairs = tuple((name, obj) for name, obj in self.product_datas.items())
         for i in range(len(__tmp_product_pairs)):
             product_name, product_obj = __tmp_product_pairs[i]
-            self.upperRightLayOut.addWidget(CustomButton(product_name, self.buttonClicked), i//c, i%c)
+            self.upperRightLayOut.addWidget(ProductButton(self, product_name), i//c, i%c)
 
         self.menuBox.setLayout(self.upperRightLayOut)
 
@@ -92,12 +105,8 @@ class GUIPosWindow(QWidget):
         button = self.sender()
         key = button.text()
 
-        # 제품 버튼을 누른 경우
-        if key in self.product_datas.keys():
-            self.purchase(key, 1)
-
         # 계산 버튼을 누른 경우
-        elif key == "계산":
+        if key == "계산":
             # 아무 것도 없는데 계산을 시도할 경우
             if len(self.purchasing_list) == 0:
                 QMessageBox.information(
@@ -142,6 +151,37 @@ class GUIPosWindow(QWidget):
             self.purchasing_list.append({"name": product_name,
                                          "quantity": quantity,
                                          "object": self.product_datas[product_name]})
+        # 화면 갱신
+        self.update_screen()
+
+    # product_name이라는 이름의 제품을 quantity만큼 구매 목록에서 뺌
+    def remove_product(self, product_name: str, quantity: int):
+        # 만약 구매 목록에 있는 상품인 경우
+        if product_name in list(map(lambda p: p["name"], self.purchasing_list)):
+            # 해당 제품이 저장된 row를 탐색
+            row_idx = 0
+            while self.purchasing_list[row_idx]["name"] != product_name:
+                row_idx += 1
+
+            # 만약 quantity 이상 많이 구매 목록에 들어있다면
+            if self.purchasing_list[row_idx]["quantity"] >= quantity:
+                # 해당 제품의 구매 수량을 quantity만큼 늘려줌
+                self.purchasing_list[row_idx]["quantity"] -= quantity
+            else:
+                QMessageBox.information(
+                    self, "ERROR!", f"{product_name}을 {quantity}만큼 뺄 수 없습니다."
+                )
+
+            # 만약 구매 목록에 방금 제외한 제품이 하나도 없다면 구매 목록에서 제외
+            if self.purchasing_list[row_idx]["quantity"] == 0:
+                del self.purchasing_list[row_idx]
+
+        # 만약 구매 목록에 없는 상품인 경우 삭제 실패 메시지를 띄워줌
+        else:
+            QMessageBox.information(
+                self, "ERROR!", f"{product_name}가 구매 목록에 없습니다."
+            )
+
         # 화면 갱신
         self.update_screen()
 
