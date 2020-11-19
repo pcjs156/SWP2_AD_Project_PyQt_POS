@@ -128,12 +128,21 @@ class GUIPosWindow(QWidget):
                 QMessageBox.information(
                     self, "ERROR!", "구매 목록이 비어 있습니다."
                 )
-            # elif not self.total_price_widget.item(3, 0).text():
-                # QMessageBox.information(
-                    # self, "ERROR!", "받은 금액을 입력하세요."
-                # )
+            elif not self.total_price_widget.item(3, 0):
+                QMessageBox.information(
+                    self, "ERROR!", "받은 금액을 입력하세요."
+                )
             else:
-                self.cash_pay()
+                # 총액보다 현금을 덜 받았는지 검사
+                received_money = int(self.total_price_widget.item(3, 0).text())
+                total_price = int(self.total_price_widget.item(2, 0).text())
+                if received_money < total_price:
+                    QMessageBox.information(
+                        self, "ERROR!", "현금이 부족합니다."
+                    )
+
+                else:
+                    self.cash_pay()
 
         elif key == "카드결제":
             # 아무 것도 없는데 계산을 시도할 경우
