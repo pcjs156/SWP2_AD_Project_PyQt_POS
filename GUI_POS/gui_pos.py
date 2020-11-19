@@ -13,7 +13,6 @@ class CustomButton(QPushButton):
         self.setText(button_text)
         self.clicked.connect(callback)
 
-
 class ProductButton(CustomButton):
     def __init__(self, POS, button_text, callback=lambda x: x):
         super().__init__(button_text, callback)
@@ -53,8 +52,8 @@ class GUIPosWindow(QWidget):
         self.purchasing_list_widget.setMinimumSize(550, 500)
 
         # lowerlayout - left
-        self.total_price_widget = QTableWidget(3, 1)
-        self.total_price_widget.setVerticalHeaderLabels(["합계", "할인", "총계"])
+        self.total_price_widget = QTableWidget(4, 1)
+        self.total_price_widget.setVerticalHeaderLabels(["주문 금액", "할인 금액", "청구 금액","받은 금액"])
         self.total_price_widget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.total_price_widget.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.total_price_widget.horizontalHeader().setVisible(False)
@@ -73,6 +72,8 @@ class GUIPosWindow(QWidget):
         for i in range(len(__tmp_product_pairs)):
             product_name, product_obj = __tmp_product_pairs[i]
             product_btn = ProductButton(self, product_name)
+            #버튼 폭 최소 길이 고정
+            product_btn.setMinimumWidth(120)
             product_btn.setToolTip(f"정가: {product_obj.price}원<br>"
                                    f"할인율: {product_obj.discount_rate}%<br>"
                                    f"가격: {product_obj.calc_price(1)}원")
@@ -82,12 +83,21 @@ class GUIPosWindow(QWidget):
         self.menuBox.setLayout(self.upperRightLayOut)
 
         # lowerlayout - right
-        self.payment_button = CustomButton("계산", self.buttonClicked)
+        self.paymentbox = QGroupBox("결제방법")
+        self.paymentLayout = QVBoxLayout()
+        self.cash_button = CustomButton("현금결제", self.buttonClicked)
+        self.cash_button.setToolTip( f"<span style='color: red;'>받은 현금을 입력하여 주세요.</span></p>")
+
+        self.card_button = CustomButton("카드결제", self.buttonClicked)
+        self.paymentLayout.addWidget(self.cash_button)
+        self.paymentLayout.addWidget(self.card_button)
+        self.paymentbox.setLayout(self.paymentLayout)
+
         self.cancel_button = CustomButton("취소", self.buttonClicked)
         self.sales_button = CustomButton("매출 정보", self.buttonClicked)
 
         self.function_layout = QHBoxLayout()
-        self.function_layout.addWidget(self.payment_button)
+        self.function_layout.addWidget(self.paymentbox)
         self.function_layout.addWidget(self.cancel_button)
         self.function_layout.addWidget(self.sales_button)
 
@@ -112,14 +122,28 @@ class GUIPosWindow(QWidget):
         key = button.text()
 
         # 계산 버튼을 누른 경우
-        if key == "계산":
+        if key == "현금결제":
+            # 아무 것도 없는데 계산을 시도할 경우
+            if len(self.purchasing_list) == 0:
+                QMessageBox.information(
+                    self, "ERROR!", "구매 목록이 비어 있습니다."
+                )
+            # elif not self.total_price_widget.item(3, 0).text():
+                # QMessageBox.information(
+                    # self, "ERROR!", "받은 금액을 입력하세요."
+                # )
+            else:
+                self.cash_pay()
+
+        elif key == "카드결제":
             # 아무 것도 없는데 계산을 시도할 경우
             if len(self.purchasing_list) == 0:
                 QMessageBox.information(
                     self, "ERROR!", "구매 목록이 비어 있습니다."
                 )
             else:
-                self.pay()
+                self.card_pay()
+
 
         # 취소 버튼을 누른 경우
         elif key == "취소":
@@ -133,7 +157,14 @@ class GUIPosWindow(QWidget):
 
         # 매출 정보 버튼을 누른 경우
         elif key == "매출 정보":
-            print("매출 정보 키가 눌렸습니다.")
+            if len(self.purchasing_list) == 0:
+                QMessageBox.information(
+                    self, "ERROR!", "구매 목록이 비어 있습니다."
+                )
+            else:
+                self.pays()
+
+            # print("매출 정보 키가 눌렸습니다.")
 
         else:
             print("알 수 없는 버튼입니다.")
@@ -193,7 +224,7 @@ class GUIPosWindow(QWidget):
 
     # 현재 구매 목록에 있는 제품들을 계산하고, 기록을 남김
     # TODO: 판매 기록을 남기는 기능
-    def pay(self):
+    def cash_pay(self):
         # 만약 아무 것도 구매 목록에 없는 경우
         if not self.purchasing_list:
             QMessageBox.information(
@@ -202,9 +233,10 @@ class GUIPosWindow(QWidget):
         # 구매 목록에 뭔가 있는 경우
         else:
             result_message = ""
-            result_message += f"정가 총액: {self.total_price_widget.item(0, 0).text()}\n"
-            result_message += f"총 할인액: {self.total_price_widget.item(1, 0).text()}\n"
-            result_message += f"총 결제액: {self.total_price_widget.item(2, 0).text()}"
+            result_message += f"받은 금액: {self.total_price_widget.item(3, 0).text()} 원\n"
+            result_message += f"결제 금액: {self.total_price_widget.item(2, 0).text()} 원\n"
+            charge = int(self.total_price_widget.item(3,0).text())-int(self.total_price_widget.item(2,0).text())
+            result_message += f"거스름 돈: {charge} 원"
 
             self.purchasing_list.clear()
             self.clear_screen()
@@ -212,6 +244,29 @@ class GUIPosWindow(QWidget):
             QMessageBox.information(
                 self, "결제 완료", result_message
             )
+
+
+    def card_pay(self):
+        # 만약 아무 것도 구매 목록에 없는 경우
+        if not self.purchasing_list:
+            QMessageBox.information(
+                self, "ERROR!", "구매 목록이 비어 있습니다."
+            )
+        # 구매 목록에 뭔가 있는 경우
+        else:
+            result_message = ""
+            result_message += f"정가 총액: {self.total_price_widget.item(0, 0).text()} 원\n"
+            result_message += f"할인 금액: {self.total_price_widget.item(1, 0).text()} 원\n"
+            result_message += f"결제 금액: {self.total_price_widget.item(2, 0).text()} 원"
+
+            self.purchasing_list.clear()
+            self.clear_screen()
+
+            QMessageBox.information(
+                self, "결제 완료", result_message
+            )
+
+
 
     # 화면을 갱신함(구매 목록, 총 구매액 등)
     def update_screen(self):
@@ -233,7 +288,6 @@ class GUIPosWindow(QWidget):
             discounted_price = product_info.calc_price(1)
             # 제품 1개당 할인액
             discount_amount = product_price - discounted_price
-
             # 할인 총액에 추가
             total_discount += discount_amount * quantity
             # 정가 기준 총액에 추가
@@ -249,12 +303,12 @@ class GUIPosWindow(QWidget):
             # 4열: 합계
             self.purchasing_list_widget.setItem(row_idx, 4, QTableWidgetItem(str(product_info.calc_price(quantity))))
 
-        # "합계"
-        self.total_price_widget.setItem(0, 0, QTableWidgetItem(str(total_price)))
-        # "할인"
+        # "주문 금액"
+        self.total_price_widget.setItem(0, 0, QTableWidgetItem(str(total_price+total_discount)))
+        # "할인 금액"
         self.total_price_widget.setItem(1, 0, QTableWidgetItem(str(total_discount)))
-        # "총계"
-        self.total_price_widget.setItem(2, 0, QTableWidgetItem(str(total_price - total_discount)))
+        # "청구 금액"
+        self.total_price_widget.setItem(2, 0, QTableWidgetItem(str(total_price)))
 
     # 모든 내용 지우기
     def clear_screen(self):
