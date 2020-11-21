@@ -1,3 +1,4 @@
+import os
 import sys
 from datetime import datetime
 
@@ -323,6 +324,11 @@ class GUIPosWindow(QWidget):
 
     # 매출 기록 파일 생성
     def create_record_file(self):
+        if not os.path.exists("sales"):
+            print("sales directory doesn't exists.")
+            os.makedirs("sales")
+            print("sales directory is created.")
+
         with open(f"./sales/{self.sales_datetime_info}.txt", 'w') as f:
             print(f"{self.sales_datetime_info}.txt is created.")
 
