@@ -261,8 +261,6 @@ class GUIPosWindow(QWidget):
             charge = int(self.total_price_widget.item(3,0).text())-int(self.total_price_widget.item(2,0).text())
             result_message += f"거스름 돈: {charge} 원"
 
-            # 판매액 누적
-            self.total_profit += int(self.total_price_widget.item(2, 0).text())
             # 판매 기록 갱신
             self.update_sales_record()
 
@@ -287,8 +285,6 @@ class GUIPosWindow(QWidget):
             result_message += f"할인 금액: {self.total_price_widget.item(1, 0).text()} 원\n"
             result_message += f"결제 금액: {self.total_price_widget.item(2, 0).text()} 원"
 
-            # 판매액 누적
-            self.total_profit += int(self.total_price_widget.item(2, 0).text())
             # 판매 기록 갱신
             self.update_sales_record()
 
@@ -313,14 +309,14 @@ class GUIPosWindow(QWidget):
             for i in range(len(self.purchasing_list)):
                 name = self.purchasing_list[i]["name"]
                 quantity = self.purchasing_list[i]["quantity"]
-                single_price = quantity * self.purchasing_list[i]["object"].calc_price(1)
-                price = quantity * self.purchasing_list[i]["object"].calc_price(quantity)
+                single_price = self.purchasing_list[i]["object"].calc_price(1)
+                price = self.purchasing_list[i]["object"].calc_price(quantity)
                 profit += price
-                # POS기 시작부터 현재 시점까지의 총 매충
-                self.total_profit += price
-
                 f.write(f"{name}, {single_price}원, {quantity}개, 총 {price}원\n")
 
+
+            # POS기 시작부터 현재 시점까지의 총 매출
+            self.total_profit += profit
             f.write(f"합계: {profit}원\n")
             f.write(f"총 매출: {self.total_profit}원\n")
             f.write('-' * GUIPosWindow.SEPARATOR_LENGTH + '\n')
