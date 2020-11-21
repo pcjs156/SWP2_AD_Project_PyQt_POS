@@ -1,9 +1,11 @@
 import sys
+from datetime import datetime
+
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QCoreApplication
 
 from CUI_POS.tools import read_interface_file
-from CUI_POS.core import Product
+from CUI_POS.core import Product, TotalSales
 
 
 class CustomButton(QPushButton):
@@ -26,11 +28,15 @@ class ProductButton(CustomButton):
 
 
 class GUIPosWindow(QWidget):
+    SEPARATOR_LENGTH = 70
+
     def __init__(self):
         super().__init__()
+        # 상단 바의 닫기 버튼 비활성화: 우측 하단의 "POS 종료" 버튼을 눌러야 기록이 정상 저장되므로
+        self.setWindowFlag(Qt.WindowCloseButtonHint, False)
 
         # 파일 불러오기
-        product_info_lines = read_interface_file(Product.PRODUCT_INTERFACE_FILENAME, "../")
+        product_info_lines = read_interface_file(Product.PRODUCT_INTERFACE_FILENAME)
         if len(product_info_lines) == 0:
             raise Product.InterfaceFileIsEmpty
         # 제품 이름: 제품 객체(Product)
@@ -40,6 +46,22 @@ class GUIPosWindow(QWidget):
         self.purchasing_list = list()
 
         self.initUI()
+
+        # POS가 구동되기 시작한 날짜/시각을 저장
+        now = datetime.now()
+        self.sales_datetime_info = f"{now.year}년 {now.month}월 {now.day}일 {now.hour}시 {now.minute}분 {now.second}초"
+
+        # POS 시작~종료까지 총 매출
+        self.total_profit = 0
+
+        # 매출 정보 관련 : 각 라인은 개행 문자로 구분됨
+        # 매출 정보의 맨 앞: POS 시작 시각, POS 종료 시각, 구분선 '='
+        self.header = list()
+        self.header.append(f"[POS 시작: {self.sales_datetime_info}]")
+        # 매출 정보의 본문: 결제 정보(판매 시각, 제품명, 갯수, (할인된)가격, 총액), 구분선 '-'
+        self.content = list()
+        # 매출 정보의 맨 끝: 구분선 '=', 판매 총액
+        self.footer = list()
 
     def initUI(self):
         # upperlayout- left
@@ -95,11 +117,13 @@ class GUIPosWindow(QWidget):
 
         self.cancel_button = CustomButton("취소", self.buttonClicked)
         self.sales_button = CustomButton("매출 정보", self.buttonClicked)
+        self.quit_button = CustomButton("POS 종료", self.buttonClicked)
 
         self.function_layout = QHBoxLayout()
         self.function_layout.addWidget(self.paymentbox)
         self.function_layout.addWidget(self.cancel_button)
         self.function_layout.addWidget(self.sales_button)
+        self.function_layout.addWidget(self.quit_button)
 
         # layout
         self.upper_layOut = QHBoxLayout()
@@ -153,7 +177,6 @@ class GUIPosWindow(QWidget):
             else:
                 self.card_pay()
 
-
         # 취소 버튼을 누른 경우
         elif key == "취소":
             if len(self.purchasing_list) == 0:
@@ -173,7 +196,10 @@ class GUIPosWindow(QWidget):
             else:
                 self.pays()
 
-            # print("매출 정보 키가 눌렸습니다.")
+        # 종료 버튼을 누른 경우
+        elif key == "POS 종료":
+            self.write_sales_record()
+            QCoreApplication.instance().quit()
 
         else:
             print("알 수 없는 버튼입니다.")
@@ -231,8 +257,7 @@ class GUIPosWindow(QWidget):
         # 화면 갱신
         self.update_screen()
 
-    # 현재 구매 목록에 있는 제품들을 계산하고, 기록을 남김
-    # TODO: 판매 기록을 남기는 기능
+    # 현금 계산 기능
     def cash_pay(self):
         # 만약 아무 것도 구매 목록에 없는 경우
         if not self.purchasing_list:
@@ -247,6 +272,11 @@ class GUIPosWindow(QWidget):
             charge = int(self.total_price_widget.item(3,0).text())-int(self.total_price_widget.item(2,0).text())
             result_message += f"거스름 돈: {charge} 원"
 
+            # 판매액 누적
+            self.total_profit += int(self.total_price_widget.item(2, 0).text())
+            # 판매 기록 갱신
+            self.update_sales_record()
+
             self.purchasing_list.clear()
             self.clear_screen()
 
@@ -254,7 +284,7 @@ class GUIPosWindow(QWidget):
                 self, "결제 완료", result_message
             )
 
-
+    # 카드 계산 기능
     def card_pay(self):
         # 만약 아무 것도 구매 목록에 없는 경우
         if not self.purchasing_list:
@@ -268,6 +298,11 @@ class GUIPosWindow(QWidget):
             result_message += f"할인 금액: {self.total_price_widget.item(1, 0).text()} 원\n"
             result_message += f"결제 금액: {self.total_price_widget.item(2, 0).text()} 원"
 
+            # 판매액 누적
+            self.total_profit += int(self.total_price_widget.item(2, 0).text())
+            # 판매 기록 갱신
+            self.update_sales_record()
+
             self.purchasing_list.clear()
             self.clear_screen()
 
@@ -275,7 +310,45 @@ class GUIPosWindow(QWidget):
                 self, "결제 완료", result_message
             )
 
+    # 판매 기록 갱신
+    def update_sales_record(self):
+        # 결제 시각 기록
+        now = datetime.now()
+        self.content.append(f"{now.year}년 {now.month}월 {now.day}일 {now.hour}시 {now.minute}분 {now.second}초")
 
+        profit = 0
+        # 결제 제품명, 수량, 가격
+        for i in range(len(self.purchasing_list)):
+            name = self.purchasing_list[i]["name"]
+            quantity = self.purchasing_list[i]["quantity"]
+            single_price = quantity * self.purchasing_list[i]["object"].calc_price(1)
+            price = quantity * self.purchasing_list[i]["object"].calc_price(quantity)
+
+            self.content.append(f"{name}, {single_price}원, {quantity}개, 총 {price}원")
+
+            profit += price
+
+        self.content.append(f"합계: {profit}원")
+        self.content.append('-' * GUIPosWindow.SEPARATOR_LENGTH)
+
+    # 판매 기록 쓰기
+    def write_sales_record(self):
+        finish = datetime.now()
+        finish_datetime_info = f"{finish.year}년 {finish.month}월 {finish.day}일 {finish.hour}시 {finish.minute}분 {finish.second}초"
+        self.header.append(f"[POS 종료: {finish_datetime_info}]")
+
+        record_title = f"./sales/{self.sales_datetime_info} ~ {finish_datetime_info}.txt"
+
+        with open(record_title, 'w') as f:
+            for line in self.header:
+                f.write(line + '\n')
+            f.write('=' * GUIPosWindow.SEPARATOR_LENGTH + '\n')
+
+            for product_sell_info in self.content:
+                f.write(product_sell_info + '\n')
+
+            f.write('=' * GUIPosWindow.SEPARATOR_LENGTH + '\n')
+            f.write(f"판매 총액: {self.total_profit}")
 
     # 화면을 갱신함(구매 목록, 총 구매액 등)
     def update_screen(self):
@@ -325,10 +398,3 @@ class GUIPosWindow(QWidget):
         self.purchasing_list_widget.clearContents()
         # 총 구매액 정보창 비우기
         self.total_price_widget.clearContents()
-
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    pos = GUIPosWindow()
-    pos.show()
-    app.exec_()
