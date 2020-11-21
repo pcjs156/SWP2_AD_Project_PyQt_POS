@@ -32,6 +32,9 @@ class GUIPosWindow(QWidget):
 
     def __init__(self):
         super().__init__()
+        # 상단 바의 닫기 버튼 비활성화: 우측 하단의 "POS 종료" 버튼을 눌러야 기록이 정상 저장되므로
+        self.setWindowFlag(Qt.WindowCloseButtonHint, False)
+
         # 파일 불러오기
         product_info_lines = read_interface_file(Product.PRODUCT_INTERFACE_FILENAME)
         if len(product_info_lines) == 0:
