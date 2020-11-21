@@ -146,16 +146,21 @@ class GUIPosWindow(QWidget):
                     self, "ERROR!", "받은 금액을 입력하세요."
                 )
             else:
-                # 총액보다 현금을 덜 받았는지 검사
-                received_money = int(self.total_price_widget.item(3, 0).text())
-                total_price = int(self.total_price_widget.item(2, 0).text())
-                if received_money < total_price:
-                    QMessageBox.information(
-                        self, "ERROR!", "현금이 부족합니다."
-                    )
+                try:
+                    # 총액보다 현금을 덜 받았는지 검사
+                    received_money = int(self.total_price_widget.item(3, 0).text())
+                    total_price = int(self.total_price_widget.item(2, 0).text())
+                    if received_money < total_price:
+                        QMessageBox.information(
+                            self, "ERROR!", "현금이 부족합니다."
+                        )
 
-                else:
-                    self.cash_pay()
+                    else:
+                        self.cash_pay()
+                except ValueError:
+                    QMessageBox.information(
+                        self, "ERROR!", "정수로 변환 가능한 값을 입력해 주세요."
+                    )
 
         elif key == "카드결제":
             # 아무 것도 없는데 계산을 시도할 경우
