@@ -8,6 +8,7 @@ from PyQt5.QtCore import Qt, QCoreApplication
 from CUI_POS.tools import read_interface_file
 from CUI_POS.core import Product, TotalSales
 
+from collections import Counter
 
 class CustomButton(QPushButton):
     def __init__(self, button_text, callback):
@@ -52,7 +53,11 @@ class GUIPosWindow(QWidget):
 
         # POS 시작부터 확인 시점까지의 총 매출
         self.total_profit = 0
+        # POS 시작부터 확인 시점까지의 총 할인액
+        self.total_discountprice = 0
         # 매출 기록 파일 생성
+
+        self.dict1={}
         self.create_record_file()
 
     def initUI(self):
@@ -109,11 +114,13 @@ class GUIPosWindow(QWidget):
 
         self.cancel_button = CustomButton("취소", self.buttonClicked)
         self.sales_button = CustomButton("매출 정보", self.buttonClicked)
+        self.gain_button = CustomButton("총 매출량", self.buttonClicked)
 
         self.function_layout = QHBoxLayout()
         self.function_layout.addWidget(self.paymentbox)
         self.function_layout.addWidget(self.cancel_button)
         self.function_layout.addWidget(self.sales_button)
+        self.function_layout.addWidget(self.gain_button)
 
         # layout
         self.upper_layOut = QHBoxLayout()
@@ -184,16 +191,34 @@ class GUIPosWindow(QWidget):
 
         # 매출 정보 버튼을 누른 경우
         elif key == "매출 정보":
-            if len(self.purchasing_list) == 0:
-                QMessageBox.information(
-                    self, "ERROR!", "구매 목록이 비어 있습니다."
-                )
-            else:
-                self.pays()
+            # if len(self.purchasing_list) == 0:
+            #     QMessageBox.information(
+            #         self, "ERROR!", "구매 목록이 비어 있습니다."
+            #     )
+            # else:
+                self.read_sales()
 
+        elif key == "총 매출량":
+            self.total_sales()
         else:
             print("알 수 없는 버튼입니다.")
             sys.exit(-1)
+
+    def total_sales(self):
+        # self.dict = sorted(self.dict.items(),reverse=True, key = lambda x:x[1])
+        # result_sales=""
+        # for i in self.dict[:3]:
+        #     result_sales+=i
+        result_sales = ""
+
+        ab = self.dict1.most_common(1)
+        b = dict(ab)
+        for i in b:
+            result_sales+=i
+
+        QMessageBox.information(
+            self, "결제 완료", result_sales
+        )
 
     # product_name이라는 이름의 제품을 quantity만큼 구매
     def purchase(self, product_name: str, quantity: int):
@@ -296,12 +321,30 @@ class GUIPosWindow(QWidget):
                 self, "결제 완료", result_message
             )
 
+    def read_sales(self):
+        f = open(f"./sales/{self.sales_datetime_info}.txt", 'r')
+        result_sales =""
+        while True:
+            line = f.readline()
+            if not line: break
+            result_sales+=line
+        f.close()
+        result_sales += f"정가 총액 : {self.total_discountprice+self.total_profit}원\n"
+        result_sales += f"총 할인액 : {self.total_discountprice}원\n"
+        result_sales += f"총 매출액 : {self.total_profit}원"
+
+        QMessageBox.information(
+            self, "매출 정보", result_sales
+        )
+
     # 판매 기록 갱신
     def update_sales_record(self):
         # 결제 시각 기록
         now = datetime.now()
         # 이번 결제의 총 판매액
         profit = 0
+        sum_discount = 0
+        dicta = {}
 
         with open(f"./sales/{self.sales_datetime_info}.txt", 'a') as f:
             f.write(f"{now.year}년 {now.month}월 {now.day}일 {now.hour}시 {now.minute}분 {now.second}초\n")
@@ -312,14 +355,24 @@ class GUIPosWindow(QWidget):
                 quantity = self.purchasing_list[i]["quantity"]
                 single_price = self.purchasing_list[i]["object"].calc_price(1)
                 price = self.purchasing_list[i]["object"].calc_price(quantity)
+                origin_price = self.purchasing_list[i]["object"].price
+                origin_discount = origin_price-single_price
+                discount = origin_discount * quantity
                 profit += price
+                sum_discount += discount
                 f.write(f"{name}, {single_price}원, {quantity}개, 총 {price}원\n")
+
+                if name in dicta:
+                    dicta[name]+=quantity
+                else:
+                    dicta[name]=quantity
 
 
             # POS기 시작부터 현재 시점까지의 총 매출
             self.total_profit += profit
+            self.total_discountprice += sum_discount
+            self.dict1 += Counter(dicta)
             f.write(f"합계: {profit}원\n")
-            f.write(f"총 매출: {self.total_profit}원\n")
             f.write('-' * GUIPosWindow.SEPARATOR_LENGTH + '\n')
 
     # 매출 기록 파일 생성
