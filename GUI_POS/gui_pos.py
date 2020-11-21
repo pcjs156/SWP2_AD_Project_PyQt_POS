@@ -32,8 +32,6 @@ class GUIPosWindow(QWidget):
 
     def __init__(self):
         super().__init__()
-        # 상단 바의 닫기 버튼 비활성화: 우측 하단의 "POS 종료" 버튼을 눌러야 기록이 정상 저장되므로
-        self.setWindowFlag(Qt.WindowCloseButtonHint, False)
 
         # 파일 불러오기
         product_info_lines = read_interface_file(Product.PRODUCT_INTERFACE_FILENAME)
@@ -51,17 +49,10 @@ class GUIPosWindow(QWidget):
         now = datetime.now()
         self.sales_datetime_info = f"{now.year}년 {now.month}월 {now.day}일 {now.hour}시 {now.minute}분 {now.second}초"
 
-        # POS 시작~종료까지 총 매출
+        # POS 시작부터 확인 시점까지의 총 매출
         self.total_profit = 0
-
-        # 매출 정보 관련 : 각 라인은 개행 문자로 구분됨
-        # 매출 정보의 맨 앞: POS 시작 시각, POS 종료 시각, 구분선 '='
-        self.header = list()
-        self.header.append(f"[POS 시작: {self.sales_datetime_info}]")
-        # 매출 정보의 본문: 결제 정보(판매 시각, 제품명, 갯수, (할인된)가격, 총액), 구분선 '-'
-        self.content = list()
-        # 매출 정보의 맨 끝: 구분선 '=', 판매 총액
-        self.footer = list()
+        # 매출 기록 파일 생성
+        self.create_record_file()
 
     def initUI(self):
         # upperlayout- left
@@ -117,13 +108,11 @@ class GUIPosWindow(QWidget):
 
         self.cancel_button = CustomButton("취소", self.buttonClicked)
         self.sales_button = CustomButton("매출 정보", self.buttonClicked)
-        self.quit_button = CustomButton("POS 종료", self.buttonClicked)
 
         self.function_layout = QHBoxLayout()
         self.function_layout.addWidget(self.paymentbox)
         self.function_layout.addWidget(self.cancel_button)
         self.function_layout.addWidget(self.sales_button)
-        self.function_layout.addWidget(self.quit_button)
 
         # layout
         self.upper_layOut = QHBoxLayout()
@@ -195,11 +184,6 @@ class GUIPosWindow(QWidget):
                 )
             else:
                 self.pays()
-
-        # 종료 버튼을 누른 경우
-        elif key == "POS 종료":
-            self.write_sales_record()
-            QCoreApplication.instance().quit()
 
         else:
             print("알 수 없는 버튼입니다.")
@@ -314,41 +298,32 @@ class GUIPosWindow(QWidget):
     def update_sales_record(self):
         # 결제 시각 기록
         now = datetime.now()
-        self.content.append(f"{now.year}년 {now.month}월 {now.day}일 {now.hour}시 {now.minute}분 {now.second}초")
-
+        # 이번 결제의 총 판매액
         profit = 0
-        # 결제 제품명, 수량, 가격
-        for i in range(len(self.purchasing_list)):
-            name = self.purchasing_list[i]["name"]
-            quantity = self.purchasing_list[i]["quantity"]
-            single_price = quantity * self.purchasing_list[i]["object"].calc_price(1)
-            price = quantity * self.purchasing_list[i]["object"].calc_price(quantity)
 
-            self.content.append(f"{name}, {single_price}원, {quantity}개, 총 {price}원")
+        with open(f"./sales/{self.sales_datetime_info}.txt", 'a') as f:
+            f.write(f"{now.year}년 {now.month}월 {now.day}일 {now.hour}시 {now.minute}분 {now.second}초\n")
 
-            profit += price
+            # 결제 제품명, 수량, 가격
+            for i in range(len(self.purchasing_list)):
+                name = self.purchasing_list[i]["name"]
+                quantity = self.purchasing_list[i]["quantity"]
+                single_price = quantity * self.purchasing_list[i]["object"].calc_price(1)
+                price = quantity * self.purchasing_list[i]["object"].calc_price(quantity)
+                profit += price
+                # POS기 시작부터 현재 시점까지의 총 매충
+                self.total_profit += price
 
-        self.content.append(f"합계: {profit}원")
-        self.content.append('-' * GUIPosWindow.SEPARATOR_LENGTH)
+                f.write(f"{name}, {single_price}원, {quantity}개, 총 {price}원\n")
 
-    # 판매 기록 쓰기
-    def write_sales_record(self):
-        finish = datetime.now()
-        finish_datetime_info = f"{finish.year}년 {finish.month}월 {finish.day}일 {finish.hour}시 {finish.minute}분 {finish.second}초"
-        self.header.append(f"[POS 종료: {finish_datetime_info}]")
+            f.write(f"합계: {profit}원\n")
+            f.write(f"총 매출: {self.total_profit}\n")
+            f.write('-' * GUIPosWindow.SEPARATOR_LENGTH + '\n')
 
-        record_title = f"./sales/{self.sales_datetime_info} ~ {finish_datetime_info}.txt"
-
-        with open(record_title, 'w') as f:
-            for line in self.header:
-                f.write(line + '\n')
-            f.write('=' * GUIPosWindow.SEPARATOR_LENGTH + '\n')
-
-            for product_sell_info in self.content:
-                f.write(product_sell_info + '\n')
-
-            f.write('=' * GUIPosWindow.SEPARATOR_LENGTH + '\n')
-            f.write(f"판매 총액: {self.total_profit}")
+    # 매출 기록 파일 생성
+    def create_record_file(self):
+        with open(f"./sales/{self.sales_datetime_info}.txt", 'w') as f:
+            print(f"{self.sales_datetime_info}.txt is created.")
 
     # 화면을 갱신함(구매 목록, 총 구매액 등)
     def update_screen(self):
