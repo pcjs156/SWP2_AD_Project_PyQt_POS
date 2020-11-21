@@ -317,7 +317,7 @@ class GUIPosWindow(QWidget):
                 f.write(f"{name}, {single_price}원, {quantity}개, 총 {price}원\n")
 
             f.write(f"합계: {profit}원\n")
-            f.write(f"총 매출: {self.total_profit}\n")
+            f.write(f"총 매출: {self.total_profit}원\n")
             f.write('-' * GUIPosWindow.SEPARATOR_LENGTH + '\n')
 
     # 매출 기록 파일 생성
