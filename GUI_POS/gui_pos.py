@@ -8,6 +8,15 @@ from PyQt5.QtCore import Qt, QCoreApplication
 from CUI_POS.tools import read_interface_file
 from CUI_POS.core import Product, TotalSales
 
+from collections import Counter
+
+import re
+
+
+
+def number_with_comma(val):
+    return re.sub("(\d)(?=(\d{3})+(?!\d))", r"\1,", "%d" % val)
+
 
 class CustomButton(QPushButton):
     def __init__(self, button_text, callback):
@@ -15,6 +24,7 @@ class CustomButton(QPushButton):
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         self.setText(button_text)
         self.clicked.connect(callback)
+
 
 class ProductButton(CustomButton):
     def __init__(self, POS, button_text, callback=lambda x: x):
@@ -52,7 +62,11 @@ class GUIPosWindow(QWidget):
 
         # POS 시작부터 확인 시점까지의 총 매출
         self.total_profit = 0
+        # POS 시작부터 확인 시점까지의 총 할인액
+        self.total_discountprice = 0
         # 매출 기록 파일 생성
+
+        self.total_sales = Counter()
         self.create_record_file()
 
     def initUI(self):
@@ -67,7 +81,7 @@ class GUIPosWindow(QWidget):
 
         # lowerlayout - left
         self.total_price_widget = QTableWidget(4, 1)
-        self.total_price_widget.setVerticalHeaderLabels(["주문 금액", "할인 금액", "청구 금액","받은 금액"])
+        self.total_price_widget.setVerticalHeaderLabels(["주문 금액", "할인 금액", "청구 금액", "받은 금액"])
         self.total_price_widget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.total_price_widget.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.total_price_widget.horizontalHeader().setVisible(False)
@@ -78,7 +92,7 @@ class GUIPosWindow(QWidget):
         # upperlayout - right
         self.menuBox = QGroupBox("메뉴")
         self.menuBox.setToolTip(f"<p><span style='color: blue;'>좌클릭시 제품을 구매 목록에 하나 추가하고,<br></span>"
-                              + f"<span style='color: red;'>우클릭시 제품을 구매 목록에서 하나 뺍니다.</span></p>")
+                                + f"<span style='color: red;'>우클릭시 제품을 구매 목록에서 하나 뺍니다.</span></p>")
         self.upperRightLayOut = QGridLayout()
 
         r, c = 3, 5
@@ -86,13 +100,13 @@ class GUIPosWindow(QWidget):
         for i in range(len(__tmp_product_pairs)):
             product_name, product_obj = __tmp_product_pairs[i]
             product_btn = ProductButton(self, product_name)
-            #버튼 폭 최소 길이 고정
+            # 버튼 폭 최소 길이 고정
             product_btn.setMinimumWidth(120)
             product_btn.setToolTip(f"정가: {product_obj.price}원<br>"
                                    f"할인율: {product_obj.discount_rate}%<br>"
                                    f"가격: {product_obj.calc_price(1)}원")
 
-            self.upperRightLayOut.addWidget(product_btn, i//c, i%c)
+            self.upperRightLayOut.addWidget(product_btn, i // c, i % c)
 
         self.menuBox.setLayout(self.upperRightLayOut)
 
@@ -100,7 +114,7 @@ class GUIPosWindow(QWidget):
         self.paymentbox = QGroupBox("결제방법")
         self.paymentLayout = QVBoxLayout()
         self.cash_button = CustomButton("현금결제", self.buttonClicked)
-        self.cash_button.setToolTip( f"<span style='color: red;'>받은 현금을 입력하여 주세요.</span></p>")
+        self.cash_button.setToolTip(f"<span style='color: red;'>받은 현금을 입력하여 주세요.</span></p>")
 
         self.card_button = CustomButton("카드결제", self.buttonClicked)
         self.paymentLayout.addWidget(self.cash_button)
@@ -109,11 +123,13 @@ class GUIPosWindow(QWidget):
 
         self.cancel_button = CustomButton("취소", self.buttonClicked)
         self.sales_button = CustomButton("매출 정보", self.buttonClicked)
+        self.gain_button = CustomButton("총 매출량", self.buttonClicked)
 
         self.function_layout = QHBoxLayout()
         self.function_layout.addWidget(self.paymentbox)
         self.function_layout.addWidget(self.cancel_button)
         self.function_layout.addWidget(self.sales_button)
+        self.function_layout.addWidget(self.gain_button)
 
         # layout
         self.upper_layOut = QHBoxLayout()
@@ -184,16 +200,33 @@ class GUIPosWindow(QWidget):
 
         # 매출 정보 버튼을 누른 경우
         elif key == "매출 정보":
-            if len(self.purchasing_list) == 0:
-                QMessageBox.information(
-                    self, "ERROR!", "구매 목록이 비어 있습니다."
-                )
-            else:
-                self.pays()
+            # if len(self.purchasing_list) == 0:
+            #     QMessageBox.information(
+            #         self, "ERROR!", "구매 목록이 비어 있습니다."
+            #     )
+            # else:
+            self.read_sales()
 
+        elif key == "총 매출량":
+            self.sales_statement()
         else:
             print("알 수 없는 버튼입니다.")
             sys.exit(-1)
+
+    #총 매출량 - 내림차순 매출 판매량
+    def sales_statement(self):
+
+        a = sorted(self.total_sales.items(), reverse=True, key=lambda x: x[1])
+        descending_sales = dict(a)
+
+        result_sales = ""
+
+        for key, value in descending_sales.items():
+            result_sales += f"{key} : {value}개 \n"
+
+        QMessageBox.information(
+            self, "총 매출량", result_sales
+        )
 
     # product_name이라는 이름의 제품을 quantity만큼 구매
     def purchase(self, product_name: str, quantity: int):
@@ -257,10 +290,10 @@ class GUIPosWindow(QWidget):
         # 구매 목록에 뭔가 있는 경우
         else:
             result_message = ""
-            result_message += f"받은 금액: {self.total_price_widget.item(3, 0).text()} 원\n"
-            result_message += f"결제 금액: {self.total_price_widget.item(2, 0).text()} 원\n"
-            charge = int(self.total_price_widget.item(3,0).text())-int(self.total_price_widget.item(2,0).text())
-            result_message += f"거스름 돈: {charge} 원"
+            result_message += f"받은 금액: {number_with_comma(int(self.total_price_widget.item(3, 0).text()))} 원\n"
+            result_message += f"결제 금액: {number_with_comma(int(self.total_price_widget.item(2, 0).text()))} 원\n"
+            charge = int(self.total_price_widget.item(3, 0).text()) - int(self.total_price_widget.item(2, 0).text())
+            result_message += f"거스름 돈: {number_with_comma(charge)} 원"
 
             # 판매 기록 갱신
             self.update_sales_record()
@@ -284,7 +317,7 @@ class GUIPosWindow(QWidget):
             result_message = ""
             result_message += f"정가 총액: {self.total_price_widget.item(0, 0).text()} 원\n"
             result_message += f"할인 금액: {self.total_price_widget.item(1, 0).text()} 원\n"
-            result_message += f"결제 금액: {self.total_price_widget.item(2, 0).text()} 원"
+            result_message += f"결제 금액: {number_with_comma(int(self.total_price_widget.item(2, 0).text()))} 원"
 
             # 판매 기록 갱신
             self.update_sales_record()
@@ -296,12 +329,30 @@ class GUIPosWindow(QWidget):
                 self, "결제 완료", result_message
             )
 
+    def read_sales(self):
+        f = open(f"./sales/{self.sales_datetime_info}.txt", 'r')
+        result_sales = ""
+        while True:
+            line = f.readline()
+            if not line: break
+            result_sales += line
+        f.close()
+        result_sales += f"정가 총액 : {number_with_comma(self.total_discountprice + self.total_profit)}원\n"
+        result_sales += f"총 할인액 : {number_with_comma(self.total_discountprice)}원\n"
+        result_sales += f"총 매출액 : {number_with_comma(self.total_profit)}원"
+
+        QMessageBox.information(
+            self, "매출 정보", result_sales
+        )
+
     # 판매 기록 갱신
     def update_sales_record(self):
         # 결제 시각 기록
         now = datetime.now()
         # 이번 결제의 총 판매액
         profit = 0
+        sum_discount = 0
+        selected_sales = {}
 
         with open(f"./sales/{self.sales_datetime_info}.txt", 'a') as f:
             f.write(f"{now.year}년 {now.month}월 {now.day}일 {now.hour}시 {now.minute}분 {now.second}초\n")
@@ -312,14 +363,22 @@ class GUIPosWindow(QWidget):
                 quantity = self.purchasing_list[i]["quantity"]
                 single_price = self.purchasing_list[i]["object"].calc_price(1)
                 price = self.purchasing_list[i]["object"].calc_price(quantity)
+                origin_price = self.purchasing_list[i]["object"].price
+                origin_discount = origin_price - single_price
+                discount = origin_discount * quantity
                 profit += price
-                f.write(f"{name}, {single_price}원, {quantity}개, 총 {price}원\n")
-
+                sum_discount += discount
+                f.write(f"{name}, {number_with_comma(single_price)}원, {quantity}개, 총 {number_with_comma(price)}원\n")
+                if name in selected_sales:
+                    selected_sales[name] += quantity
+                else:
+                    selected_sales[name] = quantity
 
             # POS기 시작부터 현재 시점까지의 총 매출
             self.total_profit += profit
-            f.write(f"합계: {profit}원\n")
-            f.write(f"총 매출: {self.total_profit}원\n")
+            self.total_discountprice += sum_discount
+            self.total_sales += Counter(selected_sales)
+            f.write(f"합계: {number_with_comma(profit)}원\n")
             f.write('-' * GUIPosWindow.SEPARATOR_LENGTH + '\n')
 
     # 매출 기록 파일 생성
@@ -337,7 +396,7 @@ class GUIPosWindow(QWidget):
         # 화면 비우기
         self.clear_screen()
 
-        total_price = 0     # 정가 기준 총액
+        total_price = 0  # 정가 기준 총액
         total_discount = 0  # 총 할인액
 
         # 구매 목록 채우기
@@ -359,18 +418,18 @@ class GUIPosWindow(QWidget):
             # 0열: 제품명
             self.purchasing_list_widget.setItem(row_idx, 0, QTableWidgetItem(name))
             # 1열: 단가
-            self.purchasing_list_widget.setItem(row_idx, 1, QTableWidgetItem(str(product_price)))
+            self.purchasing_list_widget.setItem(row_idx, 1, QTableWidgetItem(number_with_comma(product_price)))
             # 2열: 할인액
-            self.purchasing_list_widget.setItem(row_idx, 2, QTableWidgetItem(str(discount_amount)))
+            self.purchasing_list_widget.setItem(row_idx, 2, QTableWidgetItem(number_with_comma(discount_amount)))
             # 3열: 수량
             self.purchasing_list_widget.setItem(row_idx, 3, QTableWidgetItem(str(quantity)))
             # 4열: 합계
-            self.purchasing_list_widget.setItem(row_idx, 4, QTableWidgetItem(str(product_info.calc_price(quantity))))
+            self.purchasing_list_widget.setItem(row_idx, 4, QTableWidgetItem(number_with_comma(product_info.calc_price(quantity))))
 
         # "주문 금액"
-        self.total_price_widget.setItem(0, 0, QTableWidgetItem(str(total_price+total_discount)))
+        self.total_price_widget.setItem(0, 0, QTableWidgetItem(number_with_comma(total_price + total_discount)))
         # "할인 금액"
-        self.total_price_widget.setItem(1, 0, QTableWidgetItem(str(total_discount)))
+        self.total_price_widget.setItem(1, 0, QTableWidgetItem(number_with_comma(total_discount)))
         # "청구 금액"
         self.total_price_widget.setItem(2, 0, QTableWidgetItem(str(total_price)))
 
