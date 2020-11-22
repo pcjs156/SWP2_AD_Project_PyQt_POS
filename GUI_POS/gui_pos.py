@@ -1,6 +1,7 @@
 import os
 import sys
 from datetime import datetime
+from collections import Counter
 
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt
@@ -8,14 +9,7 @@ from PyQt5.QtCore import Qt
 from CUI_POS.tools import read_interface_file
 from CUI_POS.core import Product
 
-from collections import Counter
-
-import re
-
-
-
-def number_with_comma(val):
-    return re.sub("(\d)(?=(\d{3})+(?!\d))", r"\1,", "%d" % val)
+from GUI_POS.tools import number_with_comma, delete_comma
 
 
 class CustomButton(QPushButton):
@@ -166,7 +160,7 @@ class GUIPosWindow(QWidget):
                 try:
                     # 총액보다 현금을 덜 받았는지 검사
                     received_money = int(self.total_price_widget.item(3, 0).text())
-                    total_price = int(self.total_price_widget.item(2, 0).text())
+                    total_price = delete_comma(self.total_price_widget.item(2, 0).text())
                     if received_money < total_price:
                         QMessageBox.information(
                             self, "ERROR!", "현금이 부족합니다."
@@ -200,11 +194,6 @@ class GUIPosWindow(QWidget):
 
         # 매출 정보 버튼을 누른 경우
         elif key == "매출 정보":
-            # if len(self.purchasing_list) == 0:
-            #     QMessageBox.information(
-            #         self, "ERROR!", "구매 목록이 비어 있습니다."
-            #     )
-            # else:
             self.read_sales()
 
         elif key == "총 매출량":
@@ -215,7 +204,6 @@ class GUIPosWindow(QWidget):
 
     #총 매출량 - 내림차순 매출 판매량
     def sales_statement(self):
-
         a = sorted(self.total_sales.items(), reverse=True, key=lambda x: x[1])
         descending_sales = dict(a)
 
@@ -290,9 +278,9 @@ class GUIPosWindow(QWidget):
         # 구매 목록에 뭔가 있는 경우
         else:
             result_message = ""
-            result_message += f"받은 금액: {number_with_comma(int(self.total_price_widget.item(3, 0).text()))} 원\n"
-            result_message += f"결제 금액: {number_with_comma(int(self.total_price_widget.item(2, 0).text()))} 원\n"
-            charge = int(self.total_price_widget.item(3, 0).text()) - int(self.total_price_widget.item(2, 0).text())
+            result_message += f"받은 금액: {number_with_comma(delete_comma(self.total_price_widget.item(3, 0).text()))} 원\n"
+            result_message += f"결제 금액: {number_with_comma(delete_comma(self.total_price_widget.item(2, 0).text()))} 원\n"
+            charge = delete_comma(self.total_price_widget.item(3, 0).text()) - delete_comma(self.total_price_widget.item(2, 0).text())
             result_message += f"거스름 돈: {number_with_comma(charge)} 원"
 
             # 판매 기록 갱신
