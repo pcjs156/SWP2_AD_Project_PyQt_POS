@@ -3,10 +3,10 @@ import sys
 from datetime import datetime
 
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, QCoreApplication
+from PyQt5.QtCore import Qt
 
 from CUI_POS.tools import read_interface_file
-from CUI_POS.core import Product, TotalSales
+from CUI_POS.core import Product
 
 from collections import Counter
 
