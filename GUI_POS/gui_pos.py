@@ -317,7 +317,16 @@ class GUIPosWindow(QWidget):
             result_message = ""
             result_message += f"정가 총액: {self.total_price_widget.item(0, 0).text()} 원\n"
             result_message += f"할인 금액: {self.total_price_widget.item(1, 0).text()} 원\n"
-            result_message += f"결제 금액: {number_with_comma(int(self.total_price_widget.item(2, 0).text()))} 원"
+
+            # 결제 금액: purchasing_list에 있는 모든 제품의 할인가 총액
+            total_price = 0
+            for row_idx in range(len(self.purchasing_list)):
+                product_info: Product = self.purchasing_list[row_idx]["object"]
+                quantity = self.purchasing_list[row_idx]["quantity"]
+                # 정가 기준 총액에 추가
+                total_price += product_info.calc_price(quantity)
+
+            result_message += f"결제 금액: {number_with_comma(total_price)} 원"
 
             # 판매 기록 갱신
             self.update_sales_record()
@@ -368,7 +377,7 @@ class GUIPosWindow(QWidget):
                 discount = origin_discount * quantity
                 profit += price
                 sum_discount += discount
-                f.write(f"{name}, {number_with_comma(single_price)}원, {quantity}개, 총 {number_with_comma(price)}원\n")
+                f.write(f"{name}) {number_with_comma(single_price)}원x{quantity}개=총{number_with_comma(price)}원\n")
                 if name in selected_sales:
                     selected_sales[name] += quantity
                 else:
@@ -431,7 +440,8 @@ class GUIPosWindow(QWidget):
         # "할인 금액"
         self.total_price_widget.setItem(1, 0, QTableWidgetItem(number_with_comma(total_discount)))
         # "청구 금액"
-        self.total_price_widget.setItem(2, 0, QTableWidgetItem(str(total_price)))
+        # self.total_price_widget.setItem(2, 0, QTableWidgetItem(str(total_price)))
+        self.total_price_widget.setItem(2, 0, QTableWidgetItem(number_with_comma(total_price)))
 
     # 모든 내용 지우기
     def clear_screen(self):
