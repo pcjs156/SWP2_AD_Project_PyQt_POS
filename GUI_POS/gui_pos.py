@@ -3,6 +3,11 @@ import sys
 from datetime import datetime
 from collections import Counter
 
+import numpy as np
+import matplotlib.pyplot as plt
+plt.rc('font', family='Malgun Gothic')
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt
 
@@ -11,6 +16,97 @@ from CUI_POS.core import Product
 
 from GUI_POS.tools import number_with_comma, delete_comma
 
+
+class ExWindow(QDialog):
+    def __init__(self, parent, product_sales_cnt="foo"):
+        super(QDialog, self).__init__(parent)
+        self.setupUI()
+
+    def setupUI(self):
+        self.setGeometry(600, 200, 1200, 600)
+        self.setWindowTitle("PyChart Viewer v0.1")
+
+        self.lineEdit = QLineEdit()
+        self.pushButton = QPushButton("차트그리기")
+        self.pushButton.clicked.connect(self.pushButtonClicked)
+
+        self.fig = plt.Figure()
+        self.canvas = FigureCanvas(self.fig)
+
+        leftLayout = QVBoxLayout()
+        leftLayout.addWidget(self.canvas)
+
+        # Right Layout
+        rightLayout = QVBoxLayout()
+        rightLayout.addWidget(self.lineEdit)
+        rightLayout.addWidget(self.pushButton)
+        rightLayout.addStretch(1)
+
+        layout = QHBoxLayout()
+        layout.addLayout(leftLayout)
+        layout.addLayout(rightLayout)
+        layout.setStretchFactor(leftLayout, 1)
+        layout.setStretchFactor(rightLayout, 0)
+
+        self.setLayout(layout)
+
+    def pushButtonClicked(self):
+        print(self.lineEdit.text())
+
+class GraphWidgetWindow(QDialog):
+    def __init__(self, parent, product_sales_cnt, sales_datetime_info):
+        super(QDialog, self).__init__(parent)
+        self.product_sales_cnt = product_sales_cnt
+        self.sales_datetime_info = sales_datetime_info
+
+        self.initUI()
+
+        self.setWindowTitle("매출 정보")
+        self.setGeometry(300, 200, 1300, 600)
+
+        self.draw_graph()
+
+        self.show()
+
+    def initUI(self):
+        self.fig = plt.Figure()
+        self.canvas = FigureCanvas(self.fig)
+
+        self.layout = QHBoxLayout()
+        self.layout.addWidget(self.canvas)
+        self.setLayout(self.layout)
+
+    def draw_graph(self):
+        sorted_dict_keys = sorted(self.product_sales_cnt.keys(), reverse=True)
+        sorted_dict_values = sorted(self.product_sales_cnt.values(), reverse=True)
+        for i in range(len(self.product_sales_cnt)):
+            key = sorted_dict_keys[i] if len(sorted_dict_keys[i]) < 8 else sorted_dict_keys[i][:5] + "..."
+            sorted_dict_keys[i] = f"{key} ({sorted_dict_values[i]})"
+
+        self.fig.clear()
+
+        now = datetime.now()
+        now_datetime_info = f"{now.year}년 {now.month}월 {now.day}일 {now.hour}시 {now.minute}분 {now.second}초"
+        self.fig.suptitle(f"제품별 판매량 ({self.sales_datetime_info} ~ {now_datetime_info})")
+
+        X = np.arange(len(self.product_sales_cnt))
+        Axis = self.fig.add_subplot(1, 1, 1)
+        Colors = 'red orange yellow forestgreen royalblue navy purple'.split()
+
+        for i in range(len(self.product_sales_cnt)):
+            Axis.bar(X[i], sorted_dict_values[i], align='center', width=0.5, color=Colors[i % len(Colors)])
+
+        Axis.set_xlabel("품목")
+        Axis.set_xticks(X)
+        xtickNames = Axis.set_xticklabels(sorted_dict_keys)
+        plt.setp(sorted_dict_keys)
+
+        Axis.set_ylabel("품목(판매량)")
+        ymax = max(sorted_dict_values) + 1
+        plt.ylim(0, ymax)
+
+        self.fig.autofmt_xdate()
+        self.canvas.draw()
 
 class CustomButton(QPushButton):
     def __init__(self, button_text, callback):
@@ -204,17 +300,37 @@ class GUIPosWindow(QWidget):
 
     #총 매출량 - 내림차순 매출 판매량
     def sales_statement(self):
-        a = sorted(self.total_sales.items(), reverse=True, key=lambda x: x[1])
-        descending_sales = dict(a)
+        with open(f"./sales/{self.sales_datetime_info}.txt", 'r') as f:
+            tot_lines = f.read()
 
-        result_sales = ""
+        # 파일이 비어 있지 않은 경우(거래 기록이 있는 경우)
+        if tot_lines:
+            # 구분선 기준으로 나누고, 맨 앞/뒤의 개행 문자/공백을 삭제 + 맨 뒤 라인 삭제(구분선 직후에 있는 공백)
+            tot_lines = list(map(lambda x: x.strip(), tot_lines.split('-' * GUIPosWindow.SEPARATOR_LENGTH)))[:-1]
+            # 맨 앞 라인(결제 날짜/시각 정보) 삭제
+            tot_lines = [line[1:-1] for line in list(map(lambda r: r.split('\n'), tot_lines))]
 
-        for key, value in descending_sales.items():
-            result_sales += f"{key} : {value}개 \n"
+            product_sales_cnt = dict()
+            # 라인으로 분리된 각 상품별 판매 기록을 모두 순회
+            for sales_lines in tot_lines:
+                for sales_line in sales_lines:
+                    # 제품명 / 나머지 부분으로 문자열 분리
+                    name, remainder = sales_line.split(') ')
+                    cnt = remainder.split('x')[1].split('개')[0]
 
-        QMessageBox.information(
-            self, "총 매출량", result_sales
-        )
+                    # 판매 갯수 업데이트
+                    if name in product_sales_cnt.keys():
+                        product_sales_cnt[name] += int(cnt)
+                    else:
+                        product_sales_cnt[name] = int(cnt)
+
+            GraphWidgetWindow(self, product_sales_cnt, self.sales_datetime_info).show()
+
+        # 파일이 비어 있는 경우(거래 기록이 없는 경우)
+        else:
+            QMessageBox.information(
+                self, "ERROR!", "아직 판매 기록이 없습니다!"
+            )
 
     # product_name이라는 이름의 제품을 quantity만큼 구매
     def purchase(self, product_name: str, quantity: int):
@@ -327,13 +443,14 @@ class GUIPosWindow(QWidget):
             )
 
     def read_sales(self):
-        f = open(f"./sales/{self.sales_datetime_info}.txt", 'r')
         result_sales = ""
-        while True:
-            line = f.readline()
-            if not line: break
-            result_sales += line
-        f.close()
+
+        with open(f"./sales/{self.sales_datetime_info}.txt", 'r') as f:
+            while True:
+                line = f.readline()
+                if not line: break
+                result_sales += line
+
         result_sales += f"정가 총액 : {number_with_comma(self.total_discountprice + self.total_profit)}원\n"
         result_sales += f"총 할인액 : {number_with_comma(self.total_discountprice)}원\n"
         result_sales += f"총 매출액 : {number_with_comma(self.total_profit)}원"
@@ -341,6 +458,7 @@ class GUIPosWindow(QWidget):
         QMessageBox.information(
             self, "매출 정보", result_sales
         )
+
 
     # 판매 기록 갱신
     def update_sales_record(self):
