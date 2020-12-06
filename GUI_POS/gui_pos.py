@@ -5,6 +5,9 @@ from collections import Counter
 
 import numpy as np
 import matplotlib.pyplot as plt
+from PyQt5.QtGui import QBrush, QColor
+from PyQt5.QtWidgets import QTableWidget
+
 plt.rc('font', family='Malgun Gothic')
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
@@ -129,6 +132,7 @@ class ProductButton(CustomButton):
 
 
 class GUIPosWindow(QWidget):
+    total_price_widget: QTableWidget
     SEPARATOR_LENGTH = 70
 
     def __init__(self):
@@ -178,6 +182,7 @@ class GUIPosWindow(QWidget):
         self.total_price_widget.resizeColumnsToContents()
         self.total_price_widget.resizeRowsToContents()
         self.total_price_widget.setMinimumSize(500, 100)
+
 
         # upperlayout - right
         self.menuBox = QGroupBox("메뉴")
@@ -541,14 +546,23 @@ class GUIPosWindow(QWidget):
             # 4열: 합계
             self.purchasing_list_widget.setItem(row_idx, 4, QTableWidgetItem(number_with_comma(product_info.calc_price(quantity))))
 
+        font = self.total_price_widget.font()
+        font.setPointSize(font.pointSize() + 5)
         # "주문 금액"
         self.total_price_widget.setItem(0, 0, QTableWidgetItem(number_with_comma(total_price + total_discount)))
+        self.total_price_widget.item(0,0).setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self.total_price_widget.item(0,0).setFont(font)
         # "할인 금액"
-        self.total_price_widget.setItem(1, 0, QTableWidgetItem(number_with_comma(total_discount)))
+        self.total_price_widget.setItem(1, 0, QTableWidgetItem("-" + number_with_comma(total_discount)))
+        self.total_price_widget.item(1, 0).setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self.total_price_widget.item(1, 0).setFont(font)
+
         # "청구 금액"
         # self.total_price_widget.setItem(2, 0, QTableWidgetItem(str(total_price)))
         self.total_price_widget.setItem(2, 0, QTableWidgetItem(number_with_comma(total_price)))
-
+        self.total_price_widget.item(2, 0).setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self.total_price_widget.item(2, 0).setFont(font)
+        self.total_price_widget.item(2,0).setForeground(QBrush(QColor(255, 0, 0)))
     # 모든 내용 지우기
     def clear_screen(self):
         # 구매 목록 비우기
