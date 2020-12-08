@@ -5,7 +5,7 @@ from collections import Counter
 
 import numpy as np
 import matplotlib.pyplot as plt
-from PyQt5.QtGui import QBrush, QColor
+from PyQt5.QtGui import QBrush, QColor, QIcon
 from PyQt5.QtWidgets import QTableWidget
 
 plt.rc('font', family='Malgun Gothic')
@@ -217,6 +217,7 @@ class GUIPosWindow(QWidget):
         self.paymentbox.setLayout(self.paymentLayout)
 
         self.cancel_button = CustomButton("취소", self.buttonClicked)
+        self.cancel_button.setStyleSheet("QPushButton {color: red;}")
         self.sales_button = CustomButton("매출 정보", self.buttonClicked)
         self.gain_button = CustomButton("총 매출량", self.buttonClicked)
 
@@ -240,7 +241,10 @@ class GUIPosWindow(QWidget):
         self.main_layout.addLayout(self.lower_layOut)
 
         self.setLayout(self.main_layout)
-        self.setWindowTitle('AD PROJECT')
+        self.setWindowTitle('AD PROJECT: PyQt POS System')
+
+        # 아이콘 설정
+        self.setWindowIcon(QIcon("resources/window_icon.png"))
 
     def buttonClicked(self):
         button = self.sender()
@@ -563,6 +567,7 @@ class GUIPosWindow(QWidget):
         self.total_price_widget.item(2, 0).setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
         self.total_price_widget.item(2, 0).setFont(font)
         self.total_price_widget.item(2,0).setForeground(QBrush(QColor(255, 0, 0)))
+
     # 모든 내용 지우기
     def clear_screen(self):
         # 구매 목록 비우기
