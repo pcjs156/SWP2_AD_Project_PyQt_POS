@@ -11,10 +11,6 @@
         5. 각 column을 구성하는 데이터는 적절히 입력되어야 합니다(ex. 할인율: 0 이상 100 이하의 수)
         6. 각 column 데이터의 앞 뒤에 존재하는 공백 문자는 자동으로 삭제됩니다.
 
-#### *_datas
-    - 데이터를 조작하기 위해 프로그램이 직접 사용하는 python pickle 파일입니다.
-    - 파일마다 정해진 Data Type이 존재합니다.
-
 ## 파일 설명
 #### 1. product_interface
 ##### delimiter : ","
@@ -23,8 +19,3 @@
     0. 제품명     [문자열, str, 중복 불가능]
     1. 단가       [정수, int, 0 이상]
     2. 할인율     [정수, int, 0~100%]
-    
-### 2. product_sales_data
-#### description : 제품별 
-
-#### 3. total_sales_data
