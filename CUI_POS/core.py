@@ -9,7 +9,7 @@ class Product:
     DELIMITER = ','
     COLUMN_LEN = 3
 
-    PRODUCT_INTERFACE_FILENAME = "product_interface"
+    PRODUCT_INTERFACE_FILENAME = "product_interface.txt"
     PRODUCT_DATA_FILENAME = "product_datas"
 
     def __init__(self, name: str, price: int, discount_rate: int):
@@ -62,10 +62,10 @@ class Product:
     def calc_price(self, quantity):
         return int(self.price * quantity * (100 - self.discount_rate) / 100)
 
-    # DB/product_interface 파일이 비어 있는 경우 발생
+    # DB/product_interface.txt 파일이 비어 있는 경우 발생
     class InterfaceFileIsEmpty(Exception):
         def __str__(self):
-            return "DB/product_interface 파일이 비어 있습니다."
+            return "DB/product_interface.txt 파일이 비어 있습니다."
 
     # Product column의 길이가 Product.COLUMN과 다른 경우 발생
     class InconsistentColumnLength(Exception):
